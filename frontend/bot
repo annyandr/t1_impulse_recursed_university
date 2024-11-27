@@ -30,6 +30,18 @@
             padding: 20px;
             font-size: 1.5rem;
         }
+        .theme-buttons button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .theme-buttons button:hover {
+            background-color: #45a049;
+        }
         .chat-box {
             padding: 20px;
             flex-grow: 1;
@@ -104,6 +116,43 @@
         .input-section label span:hover {
             background-color: #d6d6d6;
         }
+
+        /* Зеленая тема */
+        .green-theme .header {
+            background-color: #4caf50;
+            color: white;
+        }
+        .green-theme .chat-box {
+            background-color: #e0f7e0;
+        }
+        .green-theme .chat-message.bot {
+            color: #4caf50;
+        }
+
+        /* Синяя тема */
+        .blue-theme .header {
+            background-color: #2196f3;
+            color: white;
+        }
+        .blue-theme .chat-box {
+            background-color: #e0f7ff;
+        }
+        .blue-theme .chat-message.bot {
+            color: #2196f3;
+        }
+
+        /* Темная тема */
+        .dark-theme .header {
+            background-color: #333;
+            color: white;
+        }
+        .dark-theme .chat-box {
+            background-color: #555;
+            color: white;
+        }
+        .dark-theme .chat-message.bot {
+            color: #80e0d6;
+        }
     </style>
 </head>
 <body>
@@ -111,6 +160,11 @@
 <div class="chat-container">
     <div class="header">
         Чат-бот
+        <div class="theme-buttons">
+            <button onclick="changeTheme('green')">Зеленая</button>
+            <button onclick="changeTheme('blue')">Синяя</button>
+            <button onclick="changeTheme('dark')">Темная</button>
+        </div>
     </div>
     <div class="chat-box" id="chatBox">
         <div class="chat-message bot">Добро пожаловать! Чем я могу помочь?</div>
@@ -131,6 +185,16 @@
 </div>
 
 <script>
+    function changeTheme(theme) {
+        const chatContainer = document.querySelector('.chat-container');
+
+        // Удалить все предыдущие классы тем
+        chatContainer.classList.remove('green-theme', 'blue-theme', 'dark-theme');
+
+        // Добавить выбранную тему
+        chatContainer.classList.add(`${theme}-theme`);
+    }
+
     function selectOption(option) {
         const chatBox = document.getElementById('chatBox');
         
@@ -143,70 +207,38 @@
         // Ответ чат-бота
         const botMessage = document.createElement('div');
         botMessage.className = 'chat-message bot';
-        botMessage.textContent = `Интересный выбор! Чем я еще могу помочь?`;
+        botMessage.textContent = `Интересный выбор! Как я могу еще помочь?`;
         chatBox.appendChild(botMessage);
 
-        // Прокрутка вниз
-        chatBox.scrollTop = chatBox.scrollHeight;
+        chatBox.scrollTop = chatBox.scrollHeight; // Прокрутка вниз
     }
-
-    async function sendMessage() {
-    const chatBox = document.getElementById('chatBox');
-    const messageInput = document.getElementById('messageInput');
-    const message = messageInput.value.trim();
-
-    if (!message) {
-        alert('Пожалуйста, введите сообщение.');
-        return;
-    }
-
-    // Добавить сообщение пользователя в интерфейс
-    const userMessage = document.createElement('div');
-    userMessage.className = 'chat-message user';
-    userMessage.textContent = message;
-    chatBox.appendChild(userMessage);
-
-    try {
-        // Отправить GET-запрос на сервер с параметром message
-        const response = await fetch(`/parse?message=${encodeURIComponent(message)}`, {
-            method: 'GET',
-        });
-
-        if (!response.ok) {
-            throw new Error(`Ошибка сервера: ${response.status}`);
-        }
-
-        // Получить ответ от сервера
-        const data = await response.json();
-
-        // Добавить ответ от бота в интерфейс
-        const botMessage = document.createElement('div');
-        botMessage.className = 'chat-message bot';
-        botMessage.textContent = data.reply || 'Ответ от сервера отсутствует.';
-        chatBox.appendChild(botMessage);
-    } catch (error) {
-        console.error('Ошибка при отправке данных:', error);
-
-        // Показать сообщение об ошибке в чате
-        const botMessage = document.createElement('div');
-        botMessage.className = 'chat-message bot';
-        botMessage.textContent = 'Произошла ошибка. Попробуйте позже.';
-        chatBox.appendChild(botMessage);
-    }
-
-    // Очистить поле ввода и прокрутить вниз
-    messageInput.value = '';
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-
 
     function checkEnter(event) {
         if (event.key === 'Enter') {
             sendMessage();
         }
     }
+
+    function sendMessage() {
+        const messageInput = document.getElementById('messageInput');
+        const chatBox = document.getElementById('chatBox');
+
+        const userMessage = document.createElement('div');
+        userMessage.className = 'chat-message user';
+        userMessage.textContent = messageInput.value;
+        chatBox.appendChild(userMessage);
+
+        messageInput.value = ''; // Очистить поле ввода
+
+        const botMessage = document.createElement('div');
+        botMessage.className = 'chat-message bot';
+        botMessage.textContent = 'Я вас услышал!';
+        chatBox.appendChild(botMessage);
+
+        chatBox.scrollTop = chatBox.scrollHeight; // Прокрутка вниз
+    }
 </script>
 
 </body>
 </html>
+
