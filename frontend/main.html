@@ -73,12 +73,26 @@
 
         function changeTheme(theme) {
             const chatContainer = document.querySelector('.chat-container');
+            const body = document.body;  // Изменяем фон всего документа
 
             // Удалить все предыдущие классы тем
-            chatContainer.classList.remove('green-theme', 'blue-theme', 'dark-theme');
+            chatContainer.classList.remove('green-theme', 'blue-theme', 'dark-theme', 'lavender-theme', 'beige-theme');
 
             // Добавить выбранную тему
             chatContainer.classList.add(`${theme}-theme`);
+
+            // Изменение фона всей страницы в зависимости от темы
+            if (theme === 'green') {
+                body.style.backgroundColor = '#e3f9e5';
+            } else if (theme === 'blue') {
+                body.style.backgroundColor = '#e0f7fa';
+            } else if (theme === 'dark') {
+                body.style.backgroundColor = '#121212';
+            } else if (theme === 'lavender') {
+                body.style.backgroundColor = '#e6e6fa';
+            } else if (theme === 'beige') {
+                body.style.backgroundColor = '#f5f5dc';
+            }
         }
 
         function selectOption(option) {
@@ -99,7 +113,7 @@
             // Ответ чат-бота
             const botMessage = document.createElement('div');
             botMessage.className = 'chat-message bot';
-            botMessage.textContent = `Интересный выбор! Как я могу еще помочь?`;
+            botMessage.textContent = 'Интересный выбор! Как я могу еще помочь?';
             chatBox.appendChild(botMessage);
 
             // Добавляем анимацию появления сообщения
@@ -122,6 +136,11 @@
                 messageElement.style.opacity = 1;
             }, 10); // Маленькая задержка перед началом анимации
         }
+
+        // Устанавливаем темную тему по умолчанию
+        document.addEventListener('DOMContentLoaded', function () {
+            changeTheme('dark');
+        });
     </script>
 
     <style>
@@ -130,6 +149,7 @@
             margin: 0;
             padding: 0;
             background-color: #f4f4f9;
+            transition: background-color 0.5s ease; /* Плавный переход фона */
         }
         .chat-container {
             display: flex;
@@ -144,7 +164,7 @@
             overflow: hidden;
         }
         .header {
-            background-color: #4caf50;
+            background-color: #6c757d;
             color: white;
             text-align: center;
             padding: 20px;
@@ -153,14 +173,14 @@
         .theme-buttons button {
             margin-left: 10px;
             padding: 5px 10px;
-            background-color: #4caf50;
+            background-color: #6c757d;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
         }
         .theme-buttons button:hover {
-            background-color: #45a049;
+            background-color: #5a6368;
         }
         .chat-box {
             padding: 20px;
@@ -172,7 +192,7 @@
             margin-bottom: 10px;
         }
         .chat-message.bot {
-            color: #4caf50;
+            color: #6c757d;
             font-weight: bold;
         }
         .chat-message.user {
@@ -186,7 +206,7 @@
         }
         .response-options button {
             padding: 10px 15px;
-            background-color: #4caf50;
+            background-color: #6c757d;
             color: white;
             border: none;
             border-radius: 5px;
@@ -194,7 +214,7 @@
             font-size: 1rem;
         }
         .response-options button:hover {
-            background-color: #45a049;
+            background-color: #5a6368;
         }
         .input-section {
             display: flex;
@@ -209,7 +229,7 @@
             border-radius: 5px;
         }
         .input-section button {
-            background-color: #4caf50;
+            background-color: #6c757d;
             color: white;
             padding: 10px 15px;
             border: none;
@@ -217,7 +237,7 @@
             cursor: pointer;
         }
         .input-section button:hover {
-            background-color: #45a049;
+            background-color: #5a6368;
         }
         .input-section label {
             display: flex;
@@ -233,76 +253,113 @@
             border-radius: 5px;
             cursor: pointer;
         }
-        .input-section label span:hover {
-            background-color: #d6d6d6;
-        }
 
-        /* Зеленая тема */
+        /* Тема зеленая */
         .green-theme .header {
-            background-color: #4caf50;
+            background-color: #28a745;
             color: white;
         }
         .green-theme .chat-box {
-            background-color: #e0f7e0;
+            background-color: #d4edda;
         }
         .green-theme .chat-message.bot {
-            color: #4caf50;
+            color: #3c763d;
+        }
+        .green-theme .chat-message.user {
+            color: #155724; /* Зеленый цвет текста пользователя */
         }
 
         /* Синяя тема */
         .blue-theme .header {
-            background-color: #2196f3;
+            background-color: #007bff;
             color: white;
         }
         .blue-theme .chat-box {
-            background-color: #e0f7ff;
+            background-color: #cce7e7;
         }
         .blue-theme .chat-message.bot {
-            color: #2196f3;
+            color: #4b6d6d;
+        }
+        .blue-theme .chat-message.user {
+            color: #004085; /* Синий цвет текста пользователя */
         }
 
         /* Темная тема */
         .dark-theme .header {
-            background-color: #333;
+            background-color: #212121;
             color: white;
         }
         .dark-theme .chat-box {
-            background-color: #555;
+            background-color: #333;
             color: white;
         }
         .dark-theme .chat-message.bot {
-            color: #80e0d6;
+            color: #bbb;
+        }
+        .dark-theme .chat-message.user {
+            color: #dcdcdc; /* Светлый цвет текста пользователя */
+        }
+
+        /* Лавандовая тема */
+        .lavender-theme .header {
+            background-color: #e6e6fa;
+            color: black;
+        }
+        .lavender-theme .chat-box {
+            background-color: #f3f3fb;
+        }
+        .lavender-theme .chat-message.bot {
+            color: #5f5f5f;
+        }
+        .lavender-theme .chat-message.user {
+            color: #8a4bff; /* Лавандовый цвет текста пользователя */
+        }
+
+        /* Бежевый тема */
+        .beige-theme .header {
+            background-color: #f5deb3;
+            color: black;
+        }
+        .beige-theme .chat-box {
+            background-color: #f8f8f0;
+        }
+        .beige-theme .chat-message.bot {
+            color: #9e9e9e;
+        }
+        .beige-theme .chat-message.user {
+            color: #8b4513; /* Коричневый цвет текста пользователя */
         }
     </style>
 </head>
 <body>
-
-<div class="chat-container">
-    <div class="header">
-        Чат-бот
-        <div class="theme-buttons">
-            <button onclick="changeTheme('green')">Зеленая</button>
-            <button onclick="changeTheme('blue')">Синяя</button>
-            <button onclick="changeTheme('dark')">Темная</button>
+    <div class="chat-container dark-theme">
+        <div class="header">
+            Чат-бот
+            <div class="theme-buttons">
+                <button onclick="changeTheme('green')">Зеленая</button>
+                <button onclick="changeTheme('blue')">Синяя</button>
+                <button onclick="changeTheme('dark')">Темная</button>
+                <button onclick="changeTheme('lavender')">Лаванда</button>
+                <button onclick="changeTheme('beige')">Бежевый</button>
+            </div>
+        </div>
+        <div id="chatBox" class="chat-box">
+            <!-- Сообщения будут добавляться сюда -->
+        </div>
+        <div class="response-options">
+            <button onclick="selectOption('Option 1')">Вариант 1</button>
+            <button onclick="selectOption('Option 2')">Вариант 2</button>
+            <button onclick="selectOption('Option 3')">Вариант 3</button>
+        </div>
+        <div class="input-section">
+            <input id="message" type="text" placeholder="Введите сообщение" onkeydown="checkEnter(event)">
+            <button onclick="sendMessage()">Отправить</button>
+            <label>
+                <input id="fileInput" type="file" />
+                <span>Прикрепить файл</span>
+            </label>
+            <button onclick="sendFile()">Отправить файл</button>
         </div>
     </div>
-    <div class="chat-box" id="chatBox">
-        <!-- Сообщения чата будут отображаться здесь -->
-    </div>
-    <div class="response-options">
-        <button onclick="selectOption('Выбор 1')">Выбор 1</button>
-        <button onclick="selectOption('Выбор 2')">Выбор 2</button>
-        <button onclick="selectOption('Выбор 3')">Выбор 3</button>
-    </div>
-    <div class="input-section">
-        <input type="text" id="message" onkeydown="checkEnter(event)" placeholder="Введите сообщение">
-        <button onclick="sendMessage()">Отправить</button>
-        <label for="fileInput">
-            <span>Отправить файл</span>
-            <input type="file" id="fileInput" onchange="sendFile()">
-        </label>
-    </div>
-</div>
-
 </body>
 </html>
