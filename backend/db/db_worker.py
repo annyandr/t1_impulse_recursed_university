@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
+
 def db_url_creator(db_type, user, password, host, port, database):
     db_url_template = "{db_type}://{user}:{password}@{host}:{port}/{database}"
 
@@ -41,7 +42,7 @@ def export_data_to_file(table_name, filepath="output.txt"):
     """    Извлекает данные из указанной таблицы базы данных и записывает их в текстовый файл.
 
 Args:
-    table_name (str): Имя таблицы, из которой нужно извлечь данные.
+    table_name (str): Имя таблицы, из которой берем данные.
     engine: Движок SQLAlchemy, полученный из функции create_db.
     filepath (str, optional): Путь к файлу, в который будут записаны данные. 
                                 По умолчанию "output.txt".

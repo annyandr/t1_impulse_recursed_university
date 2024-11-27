@@ -1,69 +1,61 @@
-from db_worker import db_connector, db_url_creator
-import csv
-from sqlalchemy import text, insert, select, update
+import pandas as pd
+import psycopg2
+from psycopg2.extras import execute_values
 
 
-engine, Base, SessionLocal = db_connector(db_url_creator(
-    "postgresql", "postgres", "postgres", "localhost", "5432", "films_rating"))
-
-
-def load_tsv_to_database(filepath, table_name, engine, session_local):
-    """Loads data from a TSV file into a specified database table.
-
-    Args:
-        filepath (str): Path to the TSV file.
-        table_name (str): Name of the database table.
-        engine: SQLAlchemy engine object.
-        session: SQLAlchemy session object.
+def load_tsv_to_postgres(tsv_file, table_name, db_params):
     """
+    Загружает данные из TSV-файла в таблицу PostgreSQL.
+
+    :param tsv_file: путь к файлу .tsv
+    :param table_name: имя таблицы в PostgreSQL
+    :param db_params: словарь с параметрами подключения к базе данных
+    """
+    # Читаем TSV-файл в DataFrame
+    df = pd.read_csv(tsv_file, sep="\t")
+
+    # Устанавливаем соединение с базой данных
+    conn = psycopg2.connect(
+        host=db_params['host'],
+        port=db_params['port'],
+        database=db_params['database'],
+        user=db_params['user'],
+        password=db_params['password']
+    )
+    cursor = conn.cursor()
+
+    # Формируем запрос для вставки данных
+    columns = list(df.columns)
+    values = [tuple(row) for row in df.to_numpy()]
+    insert_query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES %s"
+
     try:
-        with session_local() as session:
-            with open(filepath, 'r', encoding='utf-8') as tsvfile:
-                reader = csv.DictReader(
-                    tsvfile, delimiter='\t')  # Note the delimiter
-
-                first_row = next(reader)
-                columns = list(first_row.keys())
-
-                column_types = {
-                    "tconst": "TEXT",
-                    "averageRating": "FLOAT",  # Or NUMERIC if you need more precision
-                    "numVotes": "INTEGER"
-                }
-
-                create_table_query = f"CREATE TABLE IF NOT EXISTS {
-                    table_name} ("
-                for col in columns:
-                    # Default to TEXT if type is unknown. Handle other types as appropriate
-                    create_table_query += f"{col} {
-                        column_types.get(col, 'TEXT')}, "
-                create_table_query = create_table_query.rstrip(", ") + ")"
-
-                with engine.connect() as conn:
-                    conn.execute(text(create_table_query))
-                    session.commit()
-
-                tsvfile.seek(0)
-                next(reader)  # To skip header row after seek
-
-                for row in reader:
-                    columns = ', '.join(row.keys())
-                    placeholders = ', '.join(['%s'] * len(row))
-                    values = tuple(row.values())
-                    insert_query = f"INSERT INTO {
-                        table_name} ({columns}) VALUES ({placeholders})"
-                    with engine.connect() as conn:
-                        conn.execute(text(insert_query), values)
-                        session.commit()
-
-        print(f"Data from '{filepath}' loaded into table '{table_name}'")
-
+        # Используем execute_values для массовой вставки
+        execute_values(cursor, insert_query, values)
+        conn.commit()
+        print(f"Данные успешно загружены в таблицу '{table_name}'.")
     except Exception as e:
-        print(f"Error loading TSV: {e}")
+        conn.rollback()
+        print(f"Ошибка загрузки данных: {e}")
+    finally:
+        cursor.close()
+        conn.close()
 
 
-# Replace with your file path
-tsv_filepath = "/home/tikhon/Загрузки/title_ratings.tsv"
-table_name = "films_rating"  # Replace with your table name
+if __name__ == "__main__":
+    # Параметры подключения к базе данных
+    # "postgresql", "postgres", "postgres", "localhost", "5432", "films_rating"))
 
-load_tsv_to_database(tsv_filepath, table_name, engine, SessionLocal)
+    db_params = {
+        "host": "localhost",
+        "port": 5432,
+        "database": "films_rating",
+        "user": "postgres",
+        "password": "postgres"
+    }
+
+    # Имя файла и таблицы
+    tsv_file = "/home/tikhon/Загрузки/title_ratings.tsv"
+    table_name = "films_rating"
+
+    load_tsv_to_postgres(tsv_file, table_name, db_params)
