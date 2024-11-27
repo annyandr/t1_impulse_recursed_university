@@ -167,13 +167,9 @@
     chatBox.appendChild(userMessage);
 
     try {
-        // Отправить сообщение на сервер
-        const response = await fetch('/parse', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ message }),
+        // Отправить GET-запрос на сервер с параметром message
+        const response = await fetch(`/parse?message=${encodeURIComponent(message)}`, {
+            method: 'GET',
         });
 
         if (!response.ok) {
@@ -202,6 +198,7 @@
     messageInput.value = '';
     chatBox.scrollTop = chatBox.scrollHeight;
 }
+
 
 
     function checkEnter(event) {
