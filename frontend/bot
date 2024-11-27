@@ -150,30 +150,59 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    function sendMessage() {
-        const chatBox = document.getElementById('chatBox');
-        const messageInput = document.getElementById('messageInput');
-        
-        if (messageInput.value.trim()) {
-            // Добавить сообщение пользователя
-            const userMessage = document.createElement('div');
-            userMessage.className = 'chat-message user';
-            userMessage.textContent = messageInput.value;
-            chatBox.appendChild(userMessage);
+    async function sendMessage() {
+    const chatBox = document.getElementById('chatBox');
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
 
-            // Ответ чат-бота
-            const botMessage = document.createElement('div');
-            botMessage.className = 'chat-message bot';
-            botMessage.textContent = `Вы сказали: "${messageInput.value}". Отлично, давайте продолжим!`;
-            chatBox.appendChild(botMessage);
-
-            // Очистить поле ввода
-            messageInput.value = '';
-
-            // Прокрутка вниз
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
+    if (!message) {
+        alert('Пожалуйста, введите сообщение.');
+        return;
     }
+
+    // Добавить сообщение пользователя в интерфейс
+    const userMessage = document.createElement('div');
+    userMessage.className = 'chat-message user';
+    userMessage.textContent = message;
+    chatBox.appendChild(userMessage);
+
+    try {
+        // Отправить сообщение на сервер
+        const response = await fetch('/parse', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Ошибка сервера: ${response.status}`);
+        }
+
+        // Получить ответ от сервера
+        const data = await response.json();
+
+        // Добавить ответ от бота в интерфейс
+        const botMessage = document.createElement('div');
+        botMessage.className = 'chat-message bot';
+        botMessage.textContent = data.reply || 'Ответ от сервера отсутствует.';
+        chatBox.appendChild(botMessage);
+    } catch (error) {
+        console.error('Ошибка при отправке данных:', error);
+
+        // Показать сообщение об ошибке в чате
+        const botMessage = document.createElement('div');
+        botMessage.className = 'chat-message bot';
+        botMessage.textContent = 'Произошла ошибка. Попробуйте позже.';
+        chatBox.appendChild(botMessage);
+    }
+
+    // Очистить поле ввода и прокрутить вниз
+    messageInput.value = '';
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
 
     function checkEnter(event) {
         if (event.key === 'Enter') {
