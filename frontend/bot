@@ -218,25 +218,57 @@
             sendMessage();
         }
     }
+    function sendGetRequest() {
+    const url = 'https://example.com/api'; // Замените на ваш URL
+
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Ошибка: ${response.status}`);
+            }
+            return response.json(); // Или response.text() для текста
+        })
+        .then(data => {
+            console.log('Ответ сервера:', data);
+
+            // Отобразим ответ в чат-боксе
+            const chatBox = document.getElementById('chatBox');
+            const botMessage = document.createElement('div');
+            botMessage.className = 'chat-message bot';
+            botMessage.textContent = `Сервер ответил: ${JSON.stringify(data)}`;
+            chatBox.appendChild(botMessage);
+
+            chatBox.scrollTop = chatBox.scrollHeight; // Прокрутка вниз
+        })
+        .catch(error => {
+            console.error('Ошибка запроса:', error);
+
+            // Отобразим ошибку в чат-боксе
+            const chatBox = document.getElementById('chatBox');
+            const botMessage = document.createElement('div');
+            botMessage.className = 'chat-message bot';
+            botMessage.textContent = `Произошла ошибка: ${error.message}`;
+            chatBox.appendChild(botMessage);
+
+            chatBox.scrollTop = chatBox.scrollHeight; // Прокрутка вниз
+        });
+}
 
     function sendMessage() {
-        const messageInput = document.getElementById('messageInput');
-        const chatBox = document.getElementById('chatBox');
+    const messageInput = document.getElementById('messageInput');
+    const chatBox = document.getElementById('chatBox');
 
-        const userMessage = document.createElement('div');
-        userMessage.className = 'chat-message user';
-        userMessage.textContent = messageInput.value;
-        chatBox.appendChild(userMessage);
+    const userMessage = document.createElement('div');
+    userMessage.className = 'chat-message user';
+    userMessage.textContent = messageInput.value;
+    chatBox.appendChild(userMessage);
 
-        messageInput.value = ''; // Очистить поле ввода
+    messageInput.value = ''; // Очистить поле ввода
 
-        const botMessage = document.createElement('div');
-        botMessage.className = 'chat-message bot';
-        botMessage.textContent = 'Я вас услышал!';
-        chatBox.appendChild(botMessage);
+    // Отправка GET-запроса
+    sendGetRequest(); // Вызов нашей функции для запроса
+}
 
-        chatBox.scrollTop = chatBox.scrollHeight; // Прокрутка вниз
-    }
 </script>
 
 </body>
