@@ -37,37 +37,39 @@ def ollama_chat(user_input, system_message, vault_embeddings, vault_content, oll
     # Get relevant context from the vault
     relevant_context = get_relevant_context(user_input, vault_embeddings_tensor, vault_content, top_k=3)
     if relevant_context:
-        # Convert list to a single string with newlines between items
         context_str = "\n".join(relevant_context)
-        print("Context Pulled from Documents: \n\n" + CYAN + context_str + RESET_COLOR)
+        return context_str
     else:
-        print(CYAN + "No relevant context found." + RESET_COLOR)
-    
-    # Prepare the user's input by concatenating it with the relevant context
-    user_input_with_context = user_input
-    if relevant_context:
-        user_input_with_context = context_str + "\n\n" + user_input
-    
-    # Append the user's input to the conversation history
-    conversation_history.append({"role": "user", "content": user_input_with_context})
-    
-    # Create a message history including the system message and the conversation history
-    messages = [
-        {"role": "system", "content": system_message},
-        *conversation_history
-    ]
-    
-    # Send the completion request to the Ollama model
-    response = client.chat.completions.create(
-        model=ollama_model,
-        messages=messages
-    )
-    
-    # Append the model's response to the conversation history
-    conversation_history.append({"role": "assistant", "content": response.choices[0].message.content})
-    
-    # Return the content of the response from the model
-    return response.choices[0].message.content
+        return "No relevant context found."
+
+        return context_str
+
+        # Prepare the user's input by concatenating it with the relevant context
+        user_input_with_context = context_str + "\n\n" + user_input  # удалить или закомментировать
+
+        if relevant_context:
+            user_input_with_context = context_str + "\n\n" + user_input
+        
+        # Append the user's input to the conversation history
+        conversation_history.append({"role": "user", "content": user_input_with_context})
+        
+        # Create a message history including the system message and the conversation history
+        messages = [
+            {"role": "system", "content": system_message},
+            *conversation_history
+        ]
+        
+        # Send the completion request to the Ollama model
+        response = client.chat.completions.create(
+            model=ollama_model,
+            messages=messages
+        )
+        
+        # Append the model's response to the conversation history
+        conversation_history.append({"role": "assistant", "content": response.choices[0].message.content})
+        
+        # Return the content of the response from the model
+        return response.choices[0].message.content
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description="Ollama Chat")
