@@ -16,24 +16,90 @@
             console.log('Server says: ' + data);
         });
 
-function sendMessage() {
-    var message = document.getElementById('message').value;
+        function sendMessage() {
+            var message = document.getElementById('message').value;
 
-    // Отправка сообщения через WebSocket
-    socket.emit('message', message);
+            // Отправка сообщения через WebSocket
+            socket.emit('message', message);
 
-    // Создание сообщения пользователя
-    const chatBox = document.getElementById('chatBox');
-    const userMessage = document.createElement('div');
-    userMessage.className = 'chat-message user';
-    userMessage.textContent = message; // Устанавливаем текст сообщения
-    chatBox.appendChild(userMessage);
+            // Создание сообщения пользователя
+            const chatBox = document.getElementById('chatBox');
+            const userMessage = document.createElement('div');
+            userMessage.className = 'chat-message user';
+            userMessage.textContent = message; // Устанавливаем текст сообщения
+            chatBox.appendChild(userMessage);
 
-    // Очищаем поле ввода после отправки
-    document.getElementById('message').value = '';
+            // Очищаем поле ввода после отправки
+            document.getElementById('message').value = '';
 
-    // Прокрутка вниз, чтобы увидеть новое сообщение
-    chatBox.scrollTop = chatBox.scrollHeight;
+            // Прокрутка вниз, чтобы увидеть новое сообщение
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Функция для отправки файла
+        function sendFile() {
+            const fileInput = document.getElementById('fileInput');  // Получаем элемент input для файла
+            const chatBox = document.getElementById('chatBox');  // Получаем контейнер чата
+
+            if (fileInput.files.length === 0) {
+                alert('Please select a file to upload!');
+                return;
+            }
+
+            const file = fileInput.files[0];  // Берем первый файл из списка файлов
+            const reader = new FileReader();
+
+            reader.onloadend = function () {
+                const fileData = reader.result;  // Получаем base64 закодированные данные файла
+                socket.emit('file', { name: file.name, data: fileData });  // Отправляем файл на сервер через сокет
+
+                // Создаем сообщение о файле
+                const userMessage = document.createElement('div');
+                userMessage.className = 'chat-message user';
+                userMessage.textContent = `Отправлен файл: ${file.name}`; // Отображаем имя файла
+                chatBox.appendChild(userMessage);
+
+                chatBox.scrollTop = chatBox.scrollHeight; // Прокрутка вниз
+            };
+
+            reader.readAsDataURL(file);  // Читаем файл как base64
+        }
+
+        function changeTheme(theme) {
+            const chatContainer = document.querySelector('.chat-container');
+
+            // Удалить все предыдущие классы тем
+            chatContainer.classList.remove('green-theme', 'blue-theme', 'dark-theme');
+
+            // Добавить выбранную тему
+            chatContainer.classList.add(`${theme}-theme`);
+        }
+
+        function selectOption(option) {
+            const chatBox = document.getElementById('chatBox');
+
+            // Добавить сообщение о выборе
+            const userMessage = document.createElement('div');
+            userMessage.className = 'chat-message user';
+            userMessage.textContent = `Вы выбрали: ${option}`;
+            chatBox.appendChild(userMessage);
+
+            // Отправить выбранный вариант через WebSocket
+            socket.emit('message', option);
+
+            // Ответ чат-бота
+            const botMessage = document.createElement('div');
+            botMessage.className = 'chat-message bot';
+            botMessage.textContent = `Интересный выбор! Как я могу еще помочь?`;
+            chatBox.appendChild(botMessage);
+
+            chatBox.scrollTop = chatBox.scrollHeight; // Прокрутка вниз
+        }
+
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
         }
     </script>
 
@@ -208,91 +274,15 @@ function sendMessage() {
         </div>
     </div>
     <div class="input-section">
-        <label>
-            <input type="file" id="fileInput">
-            <span>📎</span>
-        </label>
-        <input type="text" id="message" placeholder="Введите сообщение" onkeypress="checkEnter(event)">
+        <input type="text" id="message" placeholder="Введите сообщение..." onkeydown="checkEnter(event)">
         <button onclick="sendMessage()">Отправить</button>
+        <label>
+            <input type="file" id="fileInput" onchange="sendFile()">
+            <span>Прикрепить файл</span>
+        </label>
     </div>
 </div>
 
-<script>
-    function changeTheme(theme) {
-        const chatContainer = document.querySelector('.chat-container');
-
-        // Удалить все предыдущие классы тем
-        chatContainer.classList.remove('green-theme', 'blue-theme', 'dark-theme');
-
-        // Добавить выбранную тему
-        chatContainer.classList.add(`${theme}-theme`);
-    }
-
-    function selectOption(option) {
-        const chatBox = document.getElementById('chatBox');
-        
-        // Добавить сообщение о выборе
-        const userMessage = document.createElement('div');
-        userMessage.className = 'chat-message user';
-        userMessage.textContent = `Вы выбрали: ${option}`;
-        chatBox.appendChild(userMessage);
-
-            // Отправить выбранный вариант через WebSocket
-    socket.emit('message', option);
-
-        // Ответ чат-бота
-        const botMessage = document.createElement('div');
-        botMessage.className = 'chat-message bot';
-        botMessage.textContent = `Интересный выбор! Как я могу еще помочь?`;
-        chatBox.appendChild(botMessage);
-
-        chatBox.scrollTop = chatBox.scrollHeight; // Прокрутка вниз
-    }
-
-    function checkEnter(event) {
-        if (event.key === 'Enter') {
-            sendMessage();
-        }
-    }
-    function sendGetRequest() {
-    const url = 'https://example.com/api'; // Замените на ваш URL
-
-    fetch(url)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Ошибка: ${response.status}`);
-            }
-            return response.json(); // Или response.text() для текста
-        })
-        .then(data => {
-            console.log('Ответ сервера:', data);
-
-            // Отобразим ответ в чат-боксе
-            const chatBox = document.getElementById('chatBox');
-            const botMessage = document.createElement('div');
-            botMessage.className = 'chat-message bot';
-            botMessage.textContent = `Сервер ответил: ${JSON.stringify(data)}`;
-            chatBox.appendChild(botMessage);
-
-            chatBox.scrollTop = chatBox.scrollHeight; // Прокрутка вниз
-        })
-        .catch(error => {
-            console.error('Ошибка запроса:', error);
-
-            // Отобразим ошибку в чат-боксе
-            const chatBox = document.getElementById('chatBox');
-            const botMessage = document.createElement('div');
-            botMessage.className = 'chat-message bot';
-            botMessage.textContent = `Произошла ошибка: ${error.message}`;
-            chatBox.appendChild(botMessage);
-
-            chatBox.scrollTop = chatBox.scrollHeight; // Прокрутка вниз
-        });
-}
-
-
-</script>
-
 </body>
 </html>
-
+>
