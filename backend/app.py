@@ -13,6 +13,33 @@ socketio = SocketIO(app)
 model_tasks = []
 
 
+def get_last_task_id_num():
+    """Возвращает число из последнего task_id из списка задач
+
+    Raises: ValueError если список задач пустой
+    """
+    if model_tasks:
+        last_task = model_tasks[-1]
+        return int(last_task['task_id'].split('_')[-1])
+    raise ValueError("No tasks available")
+
+
+def append_task(prompt, model_name='ollama', model_type='ollama', chunk_size=150):
+    """Добавляет промпт в список задач для модели"""
+
+    try:
+        task_id = get_last_task_id_num() + 1
+    except ValueError:
+        task_id = 1
+
+    task = {'prompt': prompt,
+            'task_id': f'task_{task_id}',
+            'model_name': model_name,
+            'model_type': model_type,
+            'chunk_size': chunk_size}
+    model_tasks.append(task)
+
+
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
