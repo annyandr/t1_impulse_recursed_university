@@ -3,6 +3,10 @@ import ollama
 import os
 from openai import OpenAI
 import argparse
+import time
+import logging
+import requests
+
 
 # ANSI escape codes for colors
 PINK = '\033[95m'
@@ -10,70 +14,97 @@ CYAN = '\033[96m'
 YELLOW = '\033[93m'
 NEON_GREEN = '\033[92m'
 RESET_COLOR = '\033[0m'
-
-# Function to open a file and return its contents as a string
-def open_file(filepath):
-    with open(filepath, 'r', encoding='utf-8') as infile:
-        return infile.read()
+port = '5000'
+server_url = 'http://127.0.0.1'
 
 # Function to get relevant context from the vault based on user input
-def get_relevant_context(rewritten_input, vault_embeddings, vault_content, top_k=3):
-    if vault_embeddings.nelement() == 0:  # Check if the tensor has any elements
+def get_relevant_context(user_input, vault_embeddings, vault_content, top_k=3):
+    if vault_embeddings.nelement() == 0:
         return []
-    # Encode the rewritten input
-    input_embedding = ollama.embeddings(model='mxbai-embed-large', prompt=rewritten_input)["embedding"]
-    # Compute cosine similarity between the input and vault embeddings
+    
+    input_embedding = ollama.embeddings(model='mxbai-embed-large', prompt=user_input)["embedding"]
+    
+    # Compute cosine similarity
     cos_scores = torch.cosine_similarity(torch.tensor(input_embedding).unsqueeze(0), vault_embeddings)
-    # Adjust top_k if it's greater than the number of available scores
     top_k = min(top_k, len(cos_scores))
-    # Sort the scores and get the top-k indices
     top_indices = torch.topk(cos_scores, k=top_k)[1].tolist()
-    # Get the corresponding context from the vault
-    relevant_context = [vault_content[idx].strip() for idx in top_indices]
-    return relevant_context
+    
+    return [vault_content[idx].strip() for idx in top_indices]
 
 # Function to interact with the Ollama model
-def ollama_chat(user_input, system_message, vault_embeddings, vault_content, ollama_model, conversation_history):
-    # Get relevant context from the vault
-    relevant_context = get_relevant_context(user_input, vault_embeddings_tensor, vault_content, top_k=3)
+def ollama_chat(user_input, system_message, vault_embeddings, vault_content, ollama_model):
+    relevant_context = get_relevant_context(user_input, vault_embeddings, vault_content, top_k=3)
+    
     if relevant_context:
         context_str = "\n".join(relevant_context)
-        return context_str
-    else:
-        return "No relevant context found."
+        shortened_context = context_str[:100] + "..." if len(context_str) > 100 else context_str
 
-        return context_str
-
-        # Prepare the user's input by concatenating it with the relevant context
-        user_input_with_context = context_str + "\n\n" + user_input  # удалить или закомментировать
-
-        if relevant_context:
-            user_input_with_context = context_str + "\n\n" + user_input
-        
-        # Append the user's input to the conversation history
-        conversation_history.append({"role": "user", "content": user_input_with_context})
-        
-        # Create a message history including the system message and the conversation history
-        messages = [
-            {"role": "system", "content": system_message},
-            *conversation_history
-        ]
-        
-        # Send the completion request to the Ollama model
         response = client.chat.completions.create(
             model=ollama_model,
-            messages=messages
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": f"Context: {shortened_context}\n\nQuestion: {user_input}"}
+            ],
+            max_tokens=100
         )
-        
-        # Append the model's response to the conversation history
-        conversation_history.append({"role": "assistant", "content": response.choices[0].message.content})
-        
-        # Return the content of the response from the model
-        return response.choices[0].message.content
+        return response.choices[0].message.content.strip()
+    else:
+        return "No relevant context found."
+    
+def model_tasks(server_url):
+    """
+    Синхронный вариант выполнения задач модели с использованием requests.Session
+    и отправкой обратной связи на сервер.
+
+    :param server_url: URL сервера
+    """
+    with requests.Session() as session:
+        while True:
+            try:
+                # Запрос задач от сервера
+                response = session.get(f'{server_url}/model_task')
+                if response.status_code == 200:
+                    prompt = response.json().get('prompt', None)  # Получаем prompt
+                    task_id = response.json().get('task_id', None)
+                    if prompt is None or task_id is None:
+                        continue
+                    process_updates(prompt)  # Обработка prompt
+
+                    # Уведомление сервера о выполнении задачи
+                    feedback_response = session.post(
+                        f'{server_url}/task_completed/{task_id}',
+                        json={"status": "success", "prompt": prompt}
+                    )
+                    if feedback_response.status_code == 200:
+                        logging.info("Обратная связь успешно отправлена.")
+                    else:
+                        logging.warning(f"Ошибка отправки обратной связи: {feedback_response.status_code}")
+                else:
+                    logging.warning(f"Получен некорректный статус: {response.status_code}")
+            except Exception as e:
+                logging.error(f"Ошибка при выполнении запроса: {e}")
+            time.sleep(5)
+
+
+def process_updates(prompt):
+    """
+    Обработка prompt, полученного от сервера.
+
+    :param prompt: Данные prompt от сервера
+    """
+
+    user_input = prompt
+
+    response = ollama_chat(user_input, system_message, vault_embeddings_tensor, vault_content, args.model)
+    print(NEON_GREEN + "Response: \n\n" + response + RESET_COLOR)
+
+    # Логика обработки prompt
+    print("Обработан prompt:", prompt)
+
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description="Ollama Chat")
-parser.add_argument("--model", default="dolphin-llama3", help="Ollama model to use (default: llama3)")
+parser.add_argument("--model", default="dolphin-llama3", help="Ollama model to use (default: dolphin-llama3)")
 args = parser.parse_args()
 
 # Configuration for the Ollama API client
@@ -94,19 +125,14 @@ for content in vault_content:
     response = ollama.embeddings(model='mxbai-embed-large', prompt=content)
     vault_embeddings.append(response["embedding"])
 
-# Convert to tensor and print embeddings
-vault_embeddings_tensor = torch.tensor(vault_embeddings) 
-print("Embeddings for each line in the vault:")
-print(vault_embeddings_tensor)
+# Convert embeddings to tensor
+vault_embeddings_tensor = torch.tensor(vault_embeddings)
 
 # Conversation loop
-conversation_history = []
-system_message = "You are a helpful assistant that is an expert at extracting the most useful information from a given text"
+system_message = "You are a helpful assistant that is an expert at extracting the most useful information from a given text."
 
-while True:
-    user_input = input(YELLOW + "Ask a question about your documents (or type 'quit' to exit): " + RESET_COLOR)
-    if user_input.lower() == 'quit':
-        break
 
-    response = ollama_chat(user_input, system_message, vault_embeddings_tensor, vault_content, args.model, conversation_history)
-    print(NEON_GREEN + "Response: \n\n" + response + RESET_COLOR)
+
+if __name__ == "__main__":
+    server_url = f'{server_url}:{port}'
+    model_tasks(server_url)

@@ -19,36 +19,33 @@ def open_file(filepath):
 
 # Function to get relevant context from the vault based on user input
 def get_relevant_context(rewritten_input, vault_embeddings, vault_content, top_k=3):
-    if vault_embeddings.nelement() == 0:  # Check if the tensor has any elements
+    if vault_embeddings.nelement() == 0:
         return []
-    # Encode the rewritten input
+    
     input_embedding = ollama.embeddings(model='mxbai-embed-large', prompt=rewritten_input)["embedding"]
-    # Compute cosine similarity between the input and vault embeddings
+    
+    # Compute cosine similarity
     cos_scores = torch.cosine_similarity(torch.tensor(input_embedding).unsqueeze(0), vault_embeddings)
-    # Adjust top_k if it's greater than the number of available scores
+    
     top_k = min(top_k, len(cos_scores))
-    # Sort the scores and get the top-k indices
     top_indices = torch.topk(cos_scores, k=top_k)[1].tolist()
-    # Get the corresponding context from the vault
-    relevant_context = [vault_content[idx].strip() for idx in top_indices]
-    return relevant_context
+    
+    return [vault_content[idx].strip() for idx in top_indices]
 
+# Function to rewrite the query based on conversation history
 def rewrite_query(user_input_json, conversation_history, ollama_model):
     user_input = json.loads(user_input_json)["Query"]
     context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation_history[-2:]])
     prompt = f"""Rewrite the following query by incorporating relevant context from the conversation history.
     The rewritten query should:
-    
+
     - Preserve the core intent and meaning of the original query
     - Expand and clarify the query to make it more specific and informative for retrieving relevant context
     - Avoid introducing new topics or queries that deviate from the original query
-    - DONT EVER ANSWER the Original query, but instead focus on rephrasing and expanding it into a new query
-    
-    Return ONLY the rewritten query text, without any additional formatting or explanations.
     
     Conversation History:
     {context}
-    
+
     Original query: [{user_input}]
     
     Rewritten query: 
@@ -60,52 +57,29 @@ def rewrite_query(user_input_json, conversation_history, ollama_model):
         n=1,
         temperature=0.1,
     )
-    rewritten_query = response.choices[0].message.content.strip()
-    return json.dumps({"Rewritten Query": rewritten_query})
-   
+    return response.choices[0].message.content.strip()
+
+# Function to chat with Ollama using context
 def ollama_chat(user_input, system_message, vault_embeddings, vault_content, ollama_model, conversation_history):
-    conversation_history.append({"role": "user", "content": user_input})
+    # Get relevant context
+    relevant_context = get_relevant_context(user_input, vault_embeddings, vault_content, top_k=3)
     
-    if len(conversation_history) > 1:
-        query_json = {
-            "Query": user_input,
-            "Rewritten Query": ""
-        }
-        rewritten_query_json = rewrite_query(json.dumps(query_json), conversation_history, ollama_model)
-        rewritten_query_data = json.loads(rewritten_query_json)
-        rewritten_query = rewritten_query_data["Rewritten Query"]
-        print(PINK + "Original Query: " + user_input + RESET_COLOR)
-        print(PINK + "Rewritten Query: " + rewritten_query + RESET_COLOR)
-    else:
-        rewritten_query = user_input
-    
-    relevant_context = get_relevant_context(rewritten_query, vault_embeddings, vault_content)
     if relevant_context:
         context_str = "\n".join(relevant_context)
-        print("Context Pulled from Documents: \n\n" + CYAN + context_str + RESET_COLOR)
+        shortened_context = context_str[:500] + "..." if len(context_str) > 500 else context_str
+
+        # Generate response using Ollama
+        response = client.chat.completions.create(
+            model=ollama_model,
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": f"Context: {shortened_context}\n\nQuestion: {user_input}"}
+            ],
+            max_tokens=500
+        )
+        return response.choices[0].message.content.strip()
     else:
-        print(CYAN + "No relevant context found." + RESET_COLOR)
-    
-    user_input_with_context = user_input
-    if relevant_context:
-        user_input_with_context = user_input + "\n\nRelevant Context:\n" + context_str
-    
-    conversation_history[-1]["content"] = user_input_with_context
-    
-    messages = [
-        {"role": "system", "content": system_message},
-        *conversation_history
-    ]
-    
-    response = client.chat.completions.create(
-        model=ollama_model,
-        messages=messages,
-        max_tokens=2000,
-    )
-    
-    conversation_history.append({"role": "assistant", "content": response.choices[0].message.content})
-    
-    return response.choices[0].message.content
+        return "No relevant context found."
 
 # Parse command-line arguments
 print(NEON_GREEN + "Parsing command-line arguments..." + RESET_COLOR)
@@ -143,7 +117,7 @@ print(vault_embeddings_tensor)
 # Conversation loop
 print("Starting conversation loop...")
 conversation_history = []
-system_message = "You are a helpful assistant that is an expert at extracting the most useful information from a given text. Also bring in extra relevant infromation to the user query from outside the given context."
+system_message = "You are a helpful assistant that extracts useful information from a given text."
 
 while True:
     user_input = input(YELLOW + "Ask a query about your documents (or type 'quit' to exit): " + RESET_COLOR)
@@ -151,4 +125,4 @@ while True:
         break
     
     response = ollama_chat(user_input, system_message, vault_embeddings_tensor, vault_content, args.model, conversation_history)
-    print(NEON_GREEN + "Response: \n\n" + response + RESET_COLOR)
+    print(PINK + "Response: " + response + RESET_COLOR)
