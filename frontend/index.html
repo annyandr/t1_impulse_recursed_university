@@ -3,46 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Встраивание чат-бота</title>
+    <title>Chat Bot</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
     <style>
+        /* Общие стили для страницы */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7fb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
         /* Стили для кнопки активации чат-бота */
         #chatbotButton {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #6c757d;
+            bottom: 30px;
+            right: 30px;
+            background-color: #4CAF50;
             color: white;
-            padding: 10px 20px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 20px;
             border: none;
+            padding: 15px 20px;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            font-size: 24px;
+            transition: all 0.3s ease;
         }
 
         #chatbotButton:hover {
-            background-color: #5a6368;
+            background-color: #45a049;
+            transform: scale(1.1);
         }
 
         /* Стили для модального окна */
         #chatbotModal {
             display: none;
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 400px;
-            height: 600px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            top: 80%;
+            left: 80%;
+            transform: translate(-60%, -80%);
+            width: 350px;
+            height: 500px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             z-index: 1000;
-        }
-
-        #chatbotModal iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            border-radius: 8px;
+            overflow: hidden;
+            animation: fadeIn 0.3s ease-in-out;
         }
 
         /* Стили для фона */
@@ -53,12 +72,31 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
             z-index: 999;
+        }
+
+        /* Стили для анимации */
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* Стили для iframe */
+        #chatbotModal iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
+    <h1>Добро пожаловать в чат-бота!</h1>
+
     <!-- Кнопка для открытия чат-бота -->
     <button id="chatbotButton">💬</button>
 
@@ -67,7 +105,7 @@
 
     <!-- Модальное окно с чат-ботом -->
     <div id="chatbotModal">
-        <iframe src="chatbot.html" width="100%" height="100%"></iframe>
+        <iframe src="/main" width="100%" height="100%"></iframe>
     </div>
 
     <script>
