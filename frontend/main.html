@@ -332,6 +332,64 @@
             color: #6e4b3a;
         }
 
+                /* Мобильная адаптивность */
+        @media (max-width: 768px) {
+            .chat-container {
+                padding: 10px;
+                margin: 5px;
+            }
+
+            .header {
+                font-size: 1.2rem;
+                padding: 15px;
+            }
+
+            .input-section {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .response-options button {
+                font-size: 0.9rem;
+                padding: 8px 12px;
+            }
+
+            .theme-buttons button {
+                font-size: 0.8rem;
+                padding: 4px 8px;
+            }
+        }
+
+        /* Еще более адаптивная версия для мобильных */
+        @media (max-width: 480px) {
+            .header {
+                font-size: 1rem;
+                padding: 10px;
+            }
+
+            .chat-box {
+                padding: 15px;
+            }
+
+            .response-options button {
+                font-size: 0.8rem;
+                padding: 6px 10px;
+            }
+
+            .input-section button {
+                padding: 8px 12px;
+            }
+
+            .theme-buttons button {
+                font-size: 0.7rem;
+                padding: 3px 7px;
+            }
+
+            .input-section input[type="text"] {
+                font-size: 0.9rem;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -365,4 +423,6 @@
     </div>
 </body>
 </html>
+
+
 
