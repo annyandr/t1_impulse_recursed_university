@@ -1,138 +1,129 @@
 import torch
 import ollama
 import os
-from openai import OpenAI
-import argparse
 import time
 import logging
 import requests
-
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from gpt4all import GPT4All
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 # ANSI escape codes for colors
-PINK = '\033[95m'
-CYAN = '\033[96m'
-YELLOW = '\033[93m'
 NEON_GREEN = '\033[92m'
 RESET_COLOR = '\033[0m'
-port = '5000'
-server_url = 'http://127.0.0.1'
 
-# Function to get relevant context from the vault based on user input
-def get_relevant_context(user_input, vault_embeddings, vault_content, top_k=3):
-    if vault_embeddings.nelement() == 0:
-        return []
-    
-    input_embedding = ollama.embeddings(model='mxbai-embed-large', prompt=user_input)["embedding"]
-    
-    # Compute cosine similarity
-    cos_scores = torch.cosine_similarity(torch.tensor(input_embedding).unsqueeze(0), vault_embeddings)
-    top_k = min(top_k, len(cos_scores))
-    top_indices = torch.topk(cos_scores, k=top_k)[1].tolist()
-    
-    return [vault_content[idx].strip() for idx in top_indices]
+SERVER_BASE_URL = 'http://192.168.182.31'
+SERVER_PORT = 5050
 
-# Function to interact with the Ollama model
-def ollama_chat(user_input, system_message, vault_embeddings, vault_content, ollama_model):
-    relevant_context = get_relevant_context(user_input, vault_embeddings, vault_content, top_k=3)
-    
-    if relevant_context:
-        context_str = "\n".join(relevant_context)
-        shortened_context = context_str[:100] + "..." if len(context_str) > 100 else context_str
+# Function to dynamically load the model
+def load_model(model_name, model_type):
+    try:
+        if model_type == "huggingface":
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            model = AutoModelForCausalLM.from_pretrained(model_name)
+            return tokenizer, model
+        elif model_type == "gpt4all":
+            model = GPT4All(model_name)
+            return None, model
+        elif model_type == "ollama":
+            model = ollama
+            return None, model
+        elif model_type == "dolphin-llama3":
+            model = load_dolphin_llama3(model_name)
+            return None, model
+        else:
+            raise ValueError(f"Unknown model_type: {model_type}")
+    except Exception as e:
+        logging.error(f"Failed to load model {model_name}: {e}")
+        raise
 
-        response = client.chat.completions.create(
-            model=ollama_model,
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": f"Context: {shortened_context}\n\nQuestion: {user_input}"}
-            ],
-            max_tokens=100
-        )
-        return response.choices[0].message.content.strip()
-    else:
-        return "No relevant context found."
-    
-def model_tasks(server_url):
-    """
-    Синхронный вариант выполнения задач модели с использованием requests.Session
-    и отправкой обратной связи на сервер.
+# Placeholder function to load dolphin-llama3 (if needed)
+def load_dolphin_llama3(model_name):
+    logging.info(f"Loading dolphin-llama3 model: {model_name}")
+    return "dolphin-llama3-model-object"
 
-    :param server_url: URL сервера
-    """
-    with requests.Session() as session:
-        while True:
-            try:
-                # Запрос задач от сервера
-                response = session.get(f'{server_url}/model_task')
-                if response.status_code == 200:
-                    prompt = response.json().get('prompt', None)  # Получаем prompt
-                    task_id = response.json().get('task_id', None)
-                    if prompt is None or task_id is None:
-                        continue
-                    process_updates(prompt)  # Обработка prompt
+# Function to generate response based on model type
+def generate_response(model_type, model, tokenizer, prompt, model_name=None, max_length=100):
+    try:
+        if model_type == "huggingface":
+            inputs = tokenizer(prompt, return_tensors="pt")
+            outputs = model.generate(inputs["input_ids"], max_length=max_length)
+            return tokenizer.decode(outputs[0], skip_special_tokens=True)
+        elif model_type == "gpt4all":
+            return model.generate(prompt)
+        elif model_type == "ollama":
+            logging.info(f"Sending prompt to Ollama: {prompt}")
+            response = model.chat(model_name, prompt)
+            logging.info(f"Ollama response: {response}")
+            
+            if isinstance(response, dict):
+                return response.get("content", "No response generated.")
+            elif isinstance(response, list) and len(response) > 0:
+                return response[0].get("content", "No response generated.")
+            else:
+                return "Invalid response format."
+        elif model_type == "dolphin-llama3":
+            logging.info(f"Generating response from dolphin-llama3 model: {model_name}")
+            return "Mock response from dolphin-llama3"
+        else:
+            raise ValueError("Unsupported model type.")
+    except Exception as e:
+        logging.error(f"Error generating response: {e}")
+        return "Error generating response."
 
-                    # Уведомление сервера о выполнении задачи
-                    feedback_response = session.post(
-                        f'{server_url}/task_completed/{task_id}',
-                        json={"status": "success", "prompt": prompt}
-                    )
-                    if feedback_response.status_code == 200:
-                        logging.info("Обратная связь успешно отправлена.")
-                    else:
-                        logging.warning(f"Ошибка отправки обратной связи: {feedback_response.status_code}")
+# Function to process tasks from the server
+def process_task(server_url, vault_embeddings, vault_content):
+    while True:
+        try:
+            response = requests.get(f"{server_url}/model_task")
+            if response.status_code == 200:
+                task = response.json()
+                prompt = task.get('prompt', "")
+                task_id = task.get('task_id', "")
+                model_name = task.get('model_name', "gpt4all-lora")
+                model_type = task.get('model_type', "gpt4all")
+                chunk_size = task.get('chunk_size', 100)
+
+                tokenizer, model = load_model(model_name, model_type)
+                result = generate_response(model_type, model, tokenizer, prompt, model_name, max_length=chunk_size)
+
+                if not isinstance(result, str):
+                    result = str(result)  # Ensure result is a string
+                
+                payload = {"task_id": task_id, "response": result}
+                logging.info(f"Sending payload to {server_url}/task_completed/{task_id}: {payload}")
+                post_response = requests.post(f"{server_url}/task_completed/{task_id}", json=payload)
+
+                if post_response.status_code == 200:
+                    logging.info(f"Task {task_id} completed successfully.")
                 else:
-                    logging.warning(f"Получен некорректный статус: {response.status_code}")
-            except Exception as e:
-                logging.error(f"Ошибка при выполнении запроса: {e}")
-            time.sleep(5)
+                    logging.error(f"Failed to send result for task {task_id}: {post_response.status_code}")
+            elif response.status_code == 404:
+                logging.info("No tasks available. Waiting...")
+            else:
+                logging.warning(f"Unexpected server response: {response.status_code}")
+        except requests.ConnectionError as e:
+            logging.error(f"Connection error: {e}")
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+        time.sleep(5)
 
-
-def process_updates(prompt):
-    """
-    Обработка prompt, полученного от сервера.
-
-    :param prompt: Данные prompt от сервера
-    """
-
-    user_input = prompt
-
-    response = ollama_chat(user_input, system_message, vault_embeddings_tensor, vault_content, args.model)
-    print(NEON_GREEN + "Response: \n\n" + response + RESET_COLOR)
-
-    # Логика обработки prompt
-    print("Обработан prompt:", prompt)
-
-
-# Parse command-line arguments
-parser = argparse.ArgumentParser(description="Ollama Chat")
-parser.add_argument("--model", default="dolphin-llama3", help="Ollama model to use (default: dolphin-llama3)")
-args = parser.parse_args()
-
-# Configuration for the Ollama API client
-client = OpenAI(
-    base_url='http://localhost:11434/v1',
-    api_key='dolphin-llama3'
-)
-
-# Load the vault content
+# Load vault embeddings if available
 vault_content = []
 if os.path.exists("vault.txt"):
     with open("vault.txt", "r", encoding='utf-8') as vault_file:
         vault_content = vault_file.readlines()
 
-# Generate embeddings for the vault content using Ollama
 vault_embeddings = []
 for content in vault_content:
-    response = ollama.embeddings(model='mxbai-embed-large', prompt=content)
+    response = ollama.embeddings(model="mxbai-embed-large", prompt=content)
     vault_embeddings.append(response["embedding"])
 
-# Convert embeddings to tensor
 vault_embeddings_tensor = torch.tensor(vault_embeddings)
 
-# Conversation loop
-system_message = "You are a helpful assistant that is an expert at extracting the most useful information from a given text."
-
-
-
 if __name__ == "__main__":
-    server_url = f'{server_url}:{port}'
-    model_tasks(server_url)
+    server_url = f"{SERVER_BASE_URL}:{SERVER_PORT}"
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    print(NEON_GREEN + "Starting model tasks..." + RESET_COLOR)
+    process_task(server_url, vault_embeddings_tensor, vault_content)
