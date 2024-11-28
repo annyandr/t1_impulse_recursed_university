@@ -3,6 +3,23 @@ import psycopg2
 from psycopg2.extras import execute_values
 
 
+def create_table(cursor, table_name, columns):
+    """
+    Создаёт таблицу в PostgreSQL, если она не существует.
+
+    :param cursor: курсор для работы с базой данных
+    :param table_name: имя таблицы
+    :param columns: список колонок и их типов данных
+    """
+    # Формируем SQL-запрос для создания таблицы
+    create_query = f"""
+    CREATE TABLE IF NOT EXISTS {table_name} (
+        {', '.join([f'{col} TEXT' for col in columns])}
+    );
+    """
+    cursor.execute(create_query)
+
+
 def load_tsv_to_postgres(tsv_file, table_name, db_params):
     """
     Загружает данные из TSV-файла в таблицу PostgreSQL.
@@ -26,6 +43,9 @@ def load_tsv_to_postgres(tsv_file, table_name, db_params):
 
     # Формируем запрос для вставки данных
     columns = list(df.columns)
+
+    create_table(cursor, table_name, columns)
+
     values = [tuple(row) for row in df.to_numpy()]
     insert_query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES %s"
 

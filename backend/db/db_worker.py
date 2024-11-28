@@ -1,6 +1,8 @@
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import text
+import csv
 
 
 def db_url_creator(db_type, user, password, host, port, database):
@@ -38,7 +40,7 @@ Returns:
     return engine, Base, SessionLocal
 
 
-def export_data_to_file(table_name, filepath="output.txt"):
+def export_data_to_file(engine, table_name, filepath="output.txt"):
     """    Извлекает данные из указанной таблицы базы данных и записывает их в текстовый файл.
 
 Args:
