@@ -1,7 +1,7 @@
 import db.db_worker as db_worker
 
 
-def db_parser(db_type, user, password, host, port, database):
+def db_parser(db_type, user, password, host, port, database, table_name):
     """Создает подключение к базе данных и возвращает engine, Base, SessionLocal.
 
     Args:
@@ -17,7 +17,12 @@ def db_parser(db_type, user, password, host, port, database):
                объявления моделей (Base) и фабрику сессий (SessionLocal).
                Возвращает None в случае ошибки.
     """
-    engine, Base, session = db_url_creator(db_type, user, password, host, port, database)
-    db_worker.export_data_to_file()
-    session.close()
+    engine, Base, session = db_worker.db_connector(db_worker.db_url_creator(
+        db_type, user, password, host, port, database))
+    # db_connector(engine)
+    db_worker.export_data_to_file(engine=engine, table_name=table_name)
 
+
+if __name__ == "__main__":
+    db_parser("postgresql", "postgres", "postgres",
+              "localhost", "5432", "films_rating")
