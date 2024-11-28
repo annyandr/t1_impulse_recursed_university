@@ -138,6 +138,50 @@
                 messageElement.style.opacity = 1;
             }, 10); // Маленькая задержка перед началом анимации
         }
+// Функция для отправки данных с формы настроек
+        function sendModelAndChunkData() {
+            const model = document.getElementById('model').value;
+            const chunking = document.getElementById('chunking').value;
+
+            // Подготовка данных
+            const data = {
+                model: model,
+                chunking: chunking
+            };
+            // Отправка POST-запроса
+            fetch('/main/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message);
+                alert(data.message);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        // Открытие модального окна
+        function openModal() {
+            document.getElementById('settingsModal').style.display = 'block';
+        }
+
+        // Закрытие модального окна
+        function closeModal() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        // Устанавливаем темную тему по умолчанию
+        document.addEventListener('DOMContentLoaded', function () {
+            changeTheme('dark');
+        });
+
+
 
         // Устанавливаем темную тему по умолчанию
         document.addEventListener('DOMContentLoaded', function () {
@@ -403,15 +447,20 @@
                 <button onclick="changeTheme('lavender')">Лаванда</button>
                 <button onclick="changeTheme('beige')">Бежевый</button>
             </div>
+            <!-- Кнопка для открытия модального окна -->
+            <button onclick="openModal()">Настройки</button>
         </div>
+
         <div id="chatBox" class="chat-box">
             <!-- Сообщения чата будут отображаться здесь -->
         </div>
+
         <div class="response-options">
             <button onclick="selectOption('A')">A</button>
             <button onclick="selectOption('B')">B</button>
             <button onclick="selectOption('C')">C</button>
         </div>
+
         <div class="input-section">
             <input type="text" id="message" onkeydown="checkEnter(event)" placeholder="Введите сообщение...">
             <button onclick="sendMessage()">Отправить</button>
@@ -421,8 +470,114 @@
             </label>
         </div>
     </div>
+
+    <!-- Модальное окно для выбора модели и чанков -->
+    <div id="modelModal" style="display: none;">
+        <div class="model-modal-content">
+            <h3>Выберите настройки</h3>
+            <label for="modelSelect">Модель:</label>
+            <select id="modelSelect">
+                <option value="GPT4all">GPT4all</option>
+                <option value="Ollama">Ollama</option>
+                <option value="HuggingFace">HuggingFace</option>
+            </select>
+
+            <label for="chunkingInput">Введите чанкование:</label>
+    <input type="number" id="chunkingInput" placeholder="Введите число для чанкования" min="100" max="1000">
+
+            <button onclick="submitSelection()">Подтвердить</button>
+            <button onclick="closeModal()">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        // Функция для открытия модального окна
+        function openModal() {
+            document.getElementById('modelModal').style.display = 'block';
+        }
+
+        // Функция для закрытия модального окна
+        function closeModal() {
+            document.getElementById('modelModal').style.display = 'none';
+        }
+
+        // Функция для отправки выбранных настроек
+        function submitSelection() {
+    const model = document.getElementById('modelSelect').value;
+    const chunking = document.getElementById('chunkingInput').value;
+
+    // Проверим, что введено целое число
+    if (!chunking || isNaN(chunking) || chunking <= 0) {
+        alert("Пожалуйста, введите положительное целое число для чанкования.");
+        return;
+    }
+
+    // Отправка данных на сервер
+    fetch('/submit-selection', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: model,
+            chunking: parseInt(chunking) // Преобразуем строку в число
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response:', data);
+        alert('Данные успешно отправлены');
+        closeModal();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при отправке данных');
+    });
+}
+
+    </script>
+
+    <style>
+        /* Модальное окно */
+        #modelModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .model-modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+        }
+        .model-modal-content select {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .model-modal-content button {
+            margin: 10px;
+            padding: 10px 15px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .model-modal-content button:hover {
+            background-color: #5a6368;
+        }
+    </style>
 </body>
+
 </html>
-
-
 
